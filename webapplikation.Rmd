@@ -1,0 +1,107 @@
+---
+title: 'Praktischer Teil : Visualisierung von abhängigen Zufallsgrößen unter Shiny'
+author: "ayman"
+date: "2023-10-21"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Dieses R Markdown-Dokument hebt die Interaktivität mit Shiny auf die nächste Stufe. Im Gegensatz zum herkömmlichen Ansatz, statische Berichte zu erstellen, können Sie mit Shiny dynamische Dokumente erstellen, die Ihrem Publikum die Möglichkeit geben, die Variablen, die Ihrer Analyse zugrunde liegen, zu manipulieren und die Ergebnisse sofort zu beobachten. Mit Shiny können Sie interaktive Webanwendungen erstellen, die eine benutzerfreundliche Oberfläche für die Erkundung und Visualisierung abhängiger Zufallsvariablen bieten und Ihren datengestützten Berichten eine neue Dimension des Engagements und Verständnisses verleihen. Einen tieferen Einblick in die Möglichkeiten von Shiny für interaktive Dokumente erhalten Sie unter[Interactive Documents](http://rmarkdown.rstudio.com/authoring_shiny.html).
+
+## Interaktive Datenvisualisierung
+
+Dieses Dokument zeigt die Leistungsfähigkeit von Shiny, einem Webanwendungs-Framework für R, das die Erstellung interaktiver Datenvisualisierungstools ermöglicht. Unsere Anwendung wurde für die Visualisierung von abhängigen Zufallsvariablen entwickelt und bietet eine intuitive Schnittstelle für die Erkundung und Anpassung Ihrer Visualisierungen. Durch die Auswahl der X- und Y-Variablen über die Dropdown-Menüs, die Anpassung der Punktgröße mit dem Schieberegler und das Umschalten der Regressionslinie haben Sie die Flexibilität, Ihre Diagramme an Ihre spezifischen Bedürfnisse anzupassen. Darüber hinaus können Sie die Ästhetik Ihrer Visualisierungen durch die Wahl der Farben der Datenpunkte und der Regressionslinien fein abstimmen. Das Streudiagramm wird automatisch aktualisiert, wenn Sie die Eingabeparameter ändern, so dass Sie die Auswirkungen der verschiedenen Variablenauswahlen und -einstellungen schnell beurteilen können.Hinzu Kommt , dass es die Regressionsergebnisse angezeigt , die Aufschluss über die Beziehung zwischen den Variablen geben wird. Diese Anwendung demonstriert die nahtlose Integration von Shiny in Ihren Datenanalyse-Workflow und ermöglicht es Ihnen, interaktive Datenvisualisierungswerkzeuge zu erstellen, die Ihre explorative Datenanalyse verbessern.
+
+```{r eruptions, echo=FALSE}
+ui <- fluidPage(
+  titlePanel("Dependent Random Variables Visualization"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      h3("Customize Plot"),
+      
+      # Select X and Y variables
+      selectInput("xVariable", "Select X Variable:", choices = NULL),
+      selectInput("yVariable", "Select Y Variable:", choices = NULL),
+      
+      # Point size slider
+      sliderInput("pointSize", "Point Size:", min = 1, max = 5, value = 2),
+      
+      # Regression line checkbox
+      checkboxInput("regressionLine", "Show Regression Line", value = TRUE),
+      
+      # Customize plot colors
+      h4("Customize Plot Colors"),
+      selectInput("pointColor", "Point Color:", choices = c("Blue" = "blue", "Red" = "red", "Green" = "green"), selected = "blue"),
+      selectInput("lineColor", "Line Color:", choices = c("Red" = "red", "Blue" = "blue", "Green" = "green"), selected = "red"),
+      
+      # Display correlation and covariance
+      h4("Statistical Concepts"),
+      textOutput("correlationOutput"),
+      textOutput("covarianceOutput")
+    ),
+    
+    mainPanel(
+      h3("Scatterplot"),
+      plotOutput("scatterplot"),
+      h4("Regression Results"),
+      verbatimTextOutput("regressionResults")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # Load data from the provided URL
+  data <- read.csv("gVzkwBShrJKNFU4ruodQktAiM1CpVNKLNn3ga1hk.csv")  
+  
+  # Populate the variable selection dropdowns
+  observe({
+    choices <- colnames(data)
+    updateSelectInput(session, "xVariable", choices = choices)
+    updateSelectInput(session, "yVariable", choices = choices)
+  })
+  
+  # Create a scatterplot
+  output$scatterplot <- renderPlot({
+    plot(data[, input$xVariable], data[, input$yVariable], 
+         main = paste(input$xVariable, "vs. ", input$yVariable), 
+         xlab = input$xVariable, ylab = input$yVariable, pch = 19, 
+         cex = input$pointSize, col = input$pointColor)
+    
+    # Add regression line if selected
+    if (input$regressionLine) {
+      abline(lm(data[, input$yVariable] ~ data[, input$xVariable]), col = input$lineColor)
+    }
+  })
+  
+  # Calculate and display regression results
+  output$regressionResults <- renderPrint({
+    if (input$regressionLine) {
+      lm_summary <- summary(lm(data[, input$yVariable] ~ data[, input$xVariable]))
+      lm_summary$coefficients
+    } else {
+      "Regression line is not displayed."
+    }
+  })
+  
+  # Display correlation coefficient
+  output$correlationOutput <- renderText({
+    cor_value <- cor(data[, input$xVariable], data[, input$yVariable])
+    paste("Correlation Coefficient:", round(cor_value, 3))
+  })
+  
+  # Display covariance
+  output$covarianceOutput <- renderText({
+    cov_value <- cov(data[, input$xVariable], data[, input$yVariable])
+    paste("Covariance:", round(cov_value, 3))
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
